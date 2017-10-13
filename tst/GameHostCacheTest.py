@@ -15,13 +15,12 @@ class GameHostTest(unittest.TestCase):
     @patch('Hosts.get_hosts')
     @patch('GameHostDao.GameHostDao')
     def testNewGame(self, mock_dao, mock_hosts):
-        mock_dao.new_game = MagicMock()
         self.cache.dao = mock_dao
         mock_hosts.return_value = [self.host_name]
-        self.cache.hosts = mock_hosts
         self.cache.fill_cache()
         self.cache.new_game(self.game_id, self.host_name)
         mock_dao.new_game.assert_called_with(self.game_id, self.host_name)
+        self.assertEqual(self.cache.distribution[self.host_name], 1)
 
 
 
@@ -30,13 +29,13 @@ class GameHostTest(unittest.TestCase):
     def testGetHost(self, mock_dao, mock_hosts):
         self.cache.dao = mock_dao
         mock_hosts.return_value = [self.host_name]
-        self.cache.hosts = mock_hosts
         self.cache.fill_cache()
         self.cache.new_game(self.game_id, self.host_name)
         self.assertEqual(self.cache.get_host(self.game_id), self.host_name)
 
-    def testFillCache(self):
-        pass
+    @patch('GameHostDao.GameHostDao')
+    def testFillCache(self, mock_dao):
+
 
     def testDeleteGame(self):
         pass
