@@ -19,4 +19,12 @@ class GameHostDao:
         self.table.delete_item(gameId=game_id)
 
     def scan_table(self):
-        return self.table.scan()
+        scan_result = self.table.scan()
+        entries = scan_result['Items']
+
+        while 'LastEvaluatedKey' in scan_result:
+            scan_result = self.table.scan(ExclusiveStartKey=scan_result['LastEvaluatedKey'])
+            entries.extend(scan_result['Items'])
+
+        return entries
+

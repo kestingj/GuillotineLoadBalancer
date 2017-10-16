@@ -7,7 +7,7 @@ cache = GameHostCache()
 
 @app.route('/games', methods=['POST'])
 def start_new_game():
-    host = cache.find_host_for_new_game()
+    host = cache.find_host_with_min_games()
     new_game_message = request.get_json()
     put_request = requests.post(host + '/games', json=new_game_message)
     game_id = put_request.json()['gameId']
