@@ -23,7 +23,7 @@ class GameHostCacheTest(unittest.TestCase):
         mock_dao.new_game.assert_called_with(self.game_id, host_name)
         expected_distribution = set()
         expected_distribution.add(self.game_id)
-        self.assertEqual(self.cache.distribution[host_name], expected_distribution)
+        self.assertEqual(self.cache.host_distribution[host_name], expected_distribution)
 
     @patch('Hosts.get_hosts')
     @patch('GameHostDao.GameHostDao')
@@ -43,7 +43,7 @@ class GameHostCacheTest(unittest.TestCase):
         expected_distribution = {}
         for host in self.host_names:
             expected_distribution[host] = set()
-        self.assertEqual(self.cache.distribution, expected_distribution)
+        self.assertEqual(self.cache.host_distribution, expected_distribution)
 
     @patch('Hosts.get_hosts')
     @patch('GameHostDao.GameHostDao')
@@ -59,7 +59,7 @@ class GameHostCacheTest(unittest.TestCase):
             self.host_names[1] : self.getRandomGameSet(3),
             self.host_names[2] : self.getRandomGameSet(2)
         }
-        self.cache.distribution = original_distribution.copy()
+        self.cache.host_distribution = original_distribution.copy()
 
         self.cache.sync_hosts()
 
@@ -71,7 +71,7 @@ class GameHostCacheTest(unittest.TestCase):
             self.host_names[3]: reassigned_games
         }
 
-        self.assertEqual(self.cache.distribution, expected_distribution)
+        self.assertEqual(self.cache.host_distribution, expected_distribution)
         self.assertEqual(mock_dao.new_game.call_count, 2)
 
 
@@ -95,7 +95,7 @@ class GameHostCacheTest(unittest.TestCase):
         self.cache.fill_cache()
 
         expected_distribution = self.get_expected_distribution(scanned_entries, 'stale_host', self.host_names[3])
-        self.assertEqual(self.cache.distribution, expected_distribution)
+        self.assertEqual(self.cache.host_distribution, expected_distribution)
         self.assertEqual(mock_dao.new_game.call_count, 2)
 
     @patch('Hosts.get_hosts')
@@ -110,7 +110,7 @@ class GameHostCacheTest(unittest.TestCase):
         self.cache.delete_game(self.game_id)
 
         self.assertRaises(KeyError, self.cache.get_host, self.game_id)
-        self.assertEqual(self.cache.distribution[host_name], set())
+        self.assertEqual(self.cache.host_distribution[host_name], set())
 
     @patch('GameHostDao.GameHostDao')
     def testDeleteGameIsIdempotent(self, mock_dao):
@@ -125,7 +125,7 @@ class GameHostCacheTest(unittest.TestCase):
             self.host_names[2]: self.getRandomGameSet(2),
             self.host_names[3]: self.getRandomGameSet(1)
         }
-        self.cache.distribution = original_distribution
+        self.cache.host_distribution = original_distribution
 
         host = self.cache.find_host_with_min_games()
 

@@ -7,11 +7,24 @@ class GameHostDao:
         dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
         self.table = dynamodb.Table('game-host-table')
 
-    def new_game(self, game_id, host_name):
+    def new_game(self, game_id, host_name, player_ids):
         self.table.put_item(
             Item = {
                 'gameId' : game_id,
-                'hostName' : host_name
+                'hostName' : host_name,
+                'playerIds' : player_ids
+            }
+        )
+
+    def update_game_host(self, game_id, new_host_id):
+        self.table.update_item(
+            Key={
+                'gameId': game_id
+            },
+            UpdaterExpression="set hostName = :h"
+        ,
+            ExpressionAttributeValues={
+                ':h': new_host_id
             }
         )
 

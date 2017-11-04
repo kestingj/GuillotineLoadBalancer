@@ -25,3 +25,7 @@ def play(game_id, player_id):
     play_message = request.get_json()
     put_request = requests.put(host + '/games/' + game_id + '/' + player_id, data=play_message)
     return jsonify(put_request.json())
+
+@app.route('/players/<string:player_id>/games', methods=['GET'])
+def get_games_for_player(player_id):
+
