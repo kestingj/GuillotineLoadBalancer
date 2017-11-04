@@ -1,6 +1,7 @@
 from GameHostDao import GameHostDao
 import Hosts
 import sys
+import uuid
 
 
 class GameHostCache:
@@ -10,45 +11,44 @@ class GameHostCache:
         self.player_to_games = {}
         self.dao = GameHostDao()
 
-    def get_host(self, game_id):
-        return self.game_host_cache[game_id]
-
-    def new_game(self, game_id, host_name, player_ids):
+    def new_game(self, host_name, player_ids):
+        game_id = str(uuid.uuid4())
         self.dao.new_game(game_id, host_name, player_ids)
         self.game_host_cache[game_id] = (host_name, player_ids)
         self.host_distribution[host_name].add(game_id)
-        self.associate_game_with_players(game_id, player_ids)
+        self.__associate_game_with_players__(game_id, player_ids)
+        return game_id
+
+    def reassign_game(self, game_id):
+        host_name = self.__find_host_with_min_games__()
+        self.__update_game_host__(game_id, host_name)
+        return host_name
+
+    def get_games_for_player(self, player_id):
+        return self.player_to_games[player_id]
 
     def fill_cache(self):
         self.sync_hosts()
 
         entries = self.dao.scan_table()
-        orphaned_games = set()
+        orphaned_games = {}
         for entry in entries:
             game_id = entry['gameId']
             host_name = entry['hostName']
             player_ids = entry['playerIds']
-            self.associate_game_with_players(game_id, player_ids)
+            self.__associate_game_with_players__(game_id, player_ids)
             if host_name in self.host_distribution:
                 self.game_host_cache[game_id] = (host_name, player_ids)
                 self.host_distribution[host_name].add(game_id)
             else: # game's host is no longer active
-                orphaned_games.add(game_id)
+                orphaned_games[game_id] = player_ids
 
         # Find new hosts for orphaned games
-        for game_id in orphaned_games:
-            new_host = self.find_host_with_min_games()
-            self.update_game_host(game_id, new_host)
-
-    def delete_game(self, game_id):
-        self.dao.delete_game(game_id)
-        host_name, player_ids = self.game_host_cache.pop(game_id)
-        if host_name is not None:
-            self.host_distribution[host_name].discard(game_id)
-            for player_id in player_ids:
-                self.player_to_games[player_id].discard(game_id)
-                if len(self.player_to_games[player_id]) == 0:
-                    del self.player_to_games[player_id]
+        for game_id, player_ids in orphaned_games.items():
+            new_host = self.__find_host_with_min_games__()
+            self.dao.update_game_host(game_id, new_host)
+            self.game_host_cache[game_id] = (new_host, player_ids)
+            self.host_distribution[new_host].add(game_id)
 
     def sync_hosts(self):
         # Get canonical list of live hosts
@@ -69,11 +69,32 @@ class GameHostCache:
             orphaned_games = orphaned_games.union(games)
         # Redistribute games
         for game in orphaned_games:
-            new_host = self.find_host_with_min_games()
-            self.update_game_host(game, new_host)
+            new_host = self.__find_host_with_min_games__()
+            self.__update_game_host__(game, new_host)
+
+    def delete_game(self, game_id):
+        self.dao.delete_game(game_id)
+
+        # Maintain idempotency of deletes
+        if (game_id in self.game_host_cache):
+            host_name, player_ids = self.game_host_cache.pop(game_id)
+            if host_name is not None:
+                self.host_distribution[host_name].discard(game_id)
+                for player_id in player_ids:
+                    self.player_to_games[player_id].discard(game_id)
+                    if len(self.player_to_games[player_id]) == 0:
+                        del self.player_to_games[player_id]
+
+    def __update_game_host__(self, game_id, new_host_id):
+        existing_host, player_ids = self.game_host_cache.pop(game_id)
+        self.dao.update_game_host(game_id, new_host_id)
+        self.game_host_cache[game_id] = (new_host_id, player_ids)
+        if existing_host in self.host_distribution:
+            self.host_distribution[existing_host].discard(game_id)
+        self.host_distribution[new_host_id].add(game_id)
 
     # Returns host with the minimum number of ongoing games
-    def find_host_with_min_games(self):
+    def __find_host_with_min_games__(self):
         min_games = sys.maxsize
         min_host = None
         for entry in self.host_distribution.items():
@@ -84,21 +105,11 @@ class GameHostCache:
                 min_host = host_name
         return min_host
 
-    def update_game_host(self, game_id, new_host_id):
-        existing_host, player_ids = self.game_host_cache.pop(game_id)
-        self.dao.update_game_host(game_id, new_host_id)
-        self.game_host_cache[game_id] = (new_host_id, player_ids)
-        if existing_host in self.host_distribution:
-            self.host_distribution[existing_host].discard(game_id)
-        self.host_distribution[new_host_id].add(game_id)
-
-    def associate_game_with_players(self, game_id, player_ids):
+    def __associate_game_with_players__(self, game_id, player_ids):
         for player_id in player_ids:
-            if player_id in self.player_to_games:
-                self.player_to_games[player_id].add(game_id)
-            else:
-                self.player_to_games[player_id] = set(game_id)
+            if player_id not in self.player_to_games:
+                self.player_to_games[player_id] = set()
 
-
+            self.player_to_games[player_id].add(game_id)
 
 
