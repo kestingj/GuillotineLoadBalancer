@@ -5,12 +5,14 @@ import uuid
 
 
 class GameHostCache:
+
     def __init__(self):
         self.game_host_cache = {}
         self.host_distribution = {}
         self.player_to_games = {}
         self.dao = GameHostDao()
 
+    # Starts a new game with a random id and the specified host_name and playerIds
     def new_game(self, host_name, player_ids):
         game_id = str(uuid.uuid4())
         self.dao.new_game(game_id, host_name, player_ids)
@@ -20,7 +22,7 @@ class GameHostCache:
         return game_id
 
     def reassign_game(self, game_id):
-        host_name = self.__find_host_with_min_games__()
+        host_name = self.find_host_with_min_games()
         self.__update_game_host__(game_id, host_name)
         return host_name
 
@@ -45,7 +47,7 @@ class GameHostCache:
 
         # Find new hosts for orphaned games
         for game_id, player_ids in orphaned_games.items():
-            new_host = self.__find_host_with_min_games__()
+            new_host = self.find_host_with_min_games()
             self.dao.update_game_host(game_id, new_host)
             self.game_host_cache[game_id] = (new_host, player_ids)
             self.host_distribution[new_host].add(game_id)
@@ -57,7 +59,7 @@ class GameHostCache:
         hosts_with_games = self.host_distribution.keys()
         # Get list of hosts to add to load-balancer
         hosts_to_initialize = live_hosts - hosts_with_games
-        # Get lit of hosts that are no longer active and need to be removed from the load-balancer
+        # Get list of hosts that are no longer active and need to be removed from the load-balancer
         hosts_to_kill = hosts_with_games - live_hosts
         # Initialize new hosts
         for host in hosts_to_initialize:
@@ -69,7 +71,7 @@ class GameHostCache:
             orphaned_games = orphaned_games.union(games)
         # Redistribute games
         for game in orphaned_games:
-            new_host = self.__find_host_with_min_games__()
+            new_host = self.find_host_with_min_games()
             self.__update_game_host__(game, new_host)
 
     def delete_game(self, game_id):
@@ -94,13 +96,13 @@ class GameHostCache:
         self.host_distribution[new_host_id].add(game_id)
 
     # Returns host with the minimum number of ongoing games
-    def __find_host_with_min_games__(self):
+    def find_host_with_min_games(self):
         min_games = sys.maxsize
         min_host = None
         for entry in self.host_distribution.items():
             host_name = entry[0]
             num_games = len(entry[1])
-            if num_games <= min_games:
+            if num_games < min_games:
                 min_games = num_games
                 min_host = host_name
         return min_host
@@ -108,6 +110,7 @@ class GameHostCache:
     def __associate_game_with_players__(self, game_id, player_ids):
         for player_id in player_ids:
             if player_id not in self.player_to_games:
+                # New player
                 self.player_to_games[player_id] = set()
 
             self.player_to_games[player_id].add(game_id)

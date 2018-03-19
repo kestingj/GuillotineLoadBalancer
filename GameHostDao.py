@@ -21,8 +21,7 @@ class GameHostDao:
             Key={
                 'gameId': game_id
             },
-            UpdaterExpression="set hostName = :h"
-        ,
+            UpdaterExpression="set hostName = :h",
             ExpressionAttributeValues={
                 ':h': new_host_id
             }

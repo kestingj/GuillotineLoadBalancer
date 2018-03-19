@@ -140,7 +140,7 @@ class GameHostCacheTest(unittest.TestCase):
         }
         self.cache.host_distribution = original_distribution
 
-        host = self.cache.__find_host_with_min_games__()
+        host = self.cache.find_host_with_min_games()
 
         self.assertEqual(host, self.host_names[3])
 
