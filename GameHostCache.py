@@ -52,6 +52,7 @@ class GameHostCache:
             self.game_host_cache[game_id] = (new_host, player_ids)
             self.host_distribution[new_host].add(game_id)
 
+    # TODO: Need a worker that refreshes the cache at a specified interval
     def sync_hosts(self):
         # Get canonical list of live hosts
         live_hosts = Hosts.get_hosts()
