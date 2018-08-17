@@ -27,7 +27,12 @@ class GameHostCache:
         return host_name
 
     def get_games_for_player(self, player_id):
-        return self.player_to_games[player_id]
+        game_host_list = []
+        for game_id in self.player_to_games[player_id]:
+            host_name = self.game_host_cache[game_id][0]
+            game_host_list.append({'gameId': game_id, 'hostName': host_name})
+
+        return game_host_list
 
     def fill_cache(self):
         self.sync_hosts()
@@ -42,7 +47,7 @@ class GameHostCache:
             if host_name in self.host_distribution:
                 self.game_host_cache[game_id] = (host_name, player_ids)
                 self.host_distribution[host_name].add(game_id)
-            else: # game's host is no longer active
+            else:  # game's host is no longer active
                 orphaned_games[game_id] = player_ids
 
         # Find new hosts for orphaned games
@@ -79,15 +84,18 @@ class GameHostCache:
         self.dao.delete_game(game_id)
 
         # Maintain idempotency of deletes
-        if (game_id in self.game_host_cache):
+        if game_id in self.game_host_cache:
             host_name, player_ids = self.game_host_cache.pop(game_id)
             if host_name is not None:
                 self.host_distribution[host_name].discard(game_id)
                 for player_id in player_ids:
                     self.player_to_games[player_id].discard(game_id)
                     if len(self.player_to_games[player_id]) == 0:
+                        # Cleanup player if they have 0 games left. This simplifies the state of a player with no games
+                        # and a new player to a single state.
                         del self.player_to_games[player_id]
 
+    # TODO: Should be called by background thread that pings all Backend hosts for health
     def __update_game_host__(self, game_id, new_host_id):
         existing_host, player_ids = self.game_host_cache.pop(game_id)
         self.dao.update_game_host(game_id, new_host_id)
@@ -115,5 +123,3 @@ class GameHostCache:
                 self.player_to_games[player_id] = set()
 
             self.player_to_games[player_id].add(game_id)
-
-

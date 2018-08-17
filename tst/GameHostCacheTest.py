@@ -50,13 +50,12 @@ class GameHostCacheTest(unittest.TestCase):
 
         # stale_host_1 and stale_host_2 should be removed. self.host_names[3] should be added
         original_distribution = {
-            original_hosts[0] : self.get_random_game_set(1, 'stale_host_1'),
-            original_hosts[1] : self.get_random_game_set(1, 'stale_host_2'),
-            original_hosts[2] : self.get_random_game_set(2, self.host_names[0]),
-            original_hosts[3] : self.get_random_game_set(3, self.host_names[1]),
-            original_hosts[4] : self.get_random_game_set(2, self.host_names[2])
+            original_hosts[0] : self.get_game_id_set(self.get_random_game_list(1, original_hosts[0])),
+            original_hosts[1] : self.get_game_id_set(self.get_random_game_list(1, original_hosts[1])),
+            original_hosts[2] : self.get_game_id_set(self.get_random_game_list(2, original_hosts[2])),
+            original_hosts[3] : self.get_game_id_set(self.get_random_game_list(3, original_hosts[3])),
+            original_hosts[4] : self.get_game_id_set(self.get_random_game_list(2, original_hosts[4]))
         }
-        self.cache.host_distribution = original_distribution.copy()
 
         mock_hosts.return_value = self.host_names
 
@@ -133,10 +132,10 @@ class GameHostCacheTest(unittest.TestCase):
         self.initialize_cache(mock_dao, mock_hosts, self.host_names)
 
         original_distribution = {
-            self.host_names[0]: self.get_random_game_set(2, self.host_names[0]),
-            self.host_names[1]: self.get_random_game_set(3, self.host_names[1]),
-            self.host_names[2]: self.get_random_game_set(2, self.host_names[2]),
-            self.host_names[3]: self.get_random_game_set(1, self.host_names[3])
+            self.host_names[0]: self.get_random_game_list(2, self.host_names[0]),
+            self.host_names[1]: self.get_random_game_list(3, self.host_names[1]),
+            self.host_names[2]: self.get_random_game_list(2, self.host_names[2]),
+            self.host_names[3]: self.get_random_game_list(1, self.host_names[3])
         }
         self.cache.host_distribution = original_distribution
 
@@ -148,10 +147,12 @@ class GameHostCacheTest(unittest.TestCase):
     @patch('GameHostDao.GameHostDao')
     def testGetGamesForPlayer(self, mock_dao, mock_hosts):
         self.initialize_cache(mock_dao, mock_hosts, self.host_names)
-        games = self.get_random_game_set(4, self.host_names[0])
+        games = self.get_random_game_list(4, self.host_names[0])
 
         for player_id in self.player_ids:
-            self.assertEqual(self.cache.get_games_for_player(player_id), games)
+            returned_games = self.cache.get_games_for_player(player_id)
+            for game_host in returned_games:
+                self.assertTrue(game_host in games)
 
     @patch('Hosts.get_hosts')
     @patch('GameHostDao.GameHostDao')
@@ -159,9 +160,9 @@ class GameHostCacheTest(unittest.TestCase):
         self.initialize_cache(mock_dao, mock_hosts, self.host_names[:2])
         old_host_name = self.host_names[0]
         new_host_name = self.host_names[1]
-        games = self.get_random_game_set(2, old_host_name)
-        reassigned_game = games.pop()
-        other_game = games.pop()
+        games = self.get_random_game_list(2, old_host_name)
+        reassigned_game = games.pop()['gameId']
+        other_game = games.pop()['gameId']
 
         self.cache.reassign_game(reassigned_game)
 
@@ -177,11 +178,11 @@ class GameHostCacheTest(unittest.TestCase):
         self.assertEqual(self.cache.host_distribution.get(old_host_name), old_host_games)
         self.assertEqual(self.cache.host_distribution.get(new_host_name), new_host_games)
 
-    def get_random_game_set(self, count, host_name):
-        games = set()
+    def get_random_game_list(self, count, host_name):
+        games = []
         for i in range(count):
             game_id = self.cache.new_game(host_name, self.player_ids)
-            games.add(game_id)
+            games.append({'gameId': game_id, 'hostName': host_name})
         return games
 
     def rand_string(self):
@@ -211,6 +212,13 @@ class GameHostCacheTest(unittest.TestCase):
         self.cache.dao = mock_dao
         mock_hosts.return_value = host_list
         self.cache.sync_hosts()
+
+    def get_game_id_set(self, game_host_list):
+        game_id_list = set()
+        for game_host in game_host_list:
+            game_id_list.add(game_host['gameId'])
+
+        return game_id_list
 
 if __name__ == '__main__':
     unittest.main()
