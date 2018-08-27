@@ -81,7 +81,7 @@ class GameHostCache:
             self.__update_game_host__(game, new_host)
 
     def delete_game(self, game_id):
-        self.dao.delete_game(game_id)
+        self.dao.finish_game(game_id)
 
         # Maintain idempotency of deletes
         if game_id in self.game_host_cache:

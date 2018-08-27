@@ -124,7 +124,7 @@ class GameHostCacheTest(unittest.TestCase):
     def testDeleteGameIsIdempotent(self, mock_dao):
         self.cache.dao = mock_dao
         self.cache.delete_game('bogus_game')
-        mock_dao.delete_game.assert_called()
+        mock_dao.finish_game.assert_called()
 
     @patch('Hosts.get_hosts')
     @patch('GameHostDao.GameHostDao')

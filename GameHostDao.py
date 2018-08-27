@@ -27,10 +27,12 @@ class GameHostDao:
             }
         )
 
-    def delete_game(self, game_id):
-        self.table.delete_item(gameId=game_id)
+    def finish_game(self, game_id, s3Bucket, s3Key):
+        pass
+        # TODO: update game status to completed, add s3Bucket and s3Key and set host field to null
 
     def scan_table(self):
+        # TODO update to only scan for Active games
         scan_result = self.table.scan()
         entries = scan_result['Items']
 
