@@ -12,7 +12,8 @@ class GameHostDao:
             Item = {
                 'gameId' : game_id,
                 'hostName' : host_name,
-                'playerIds' : player_ids
+                'playerIds' : player_ids,
+                'status': 'Active'
             }
         )
 
@@ -21,18 +22,24 @@ class GameHostDao:
             Key={
                 'gameId': game_id
             },
-            UpdaterExpression="set hostName = :h",
+            UpdateExpression="set hostName = :h",
             ExpressionAttributeValues={
                 ':h': new_host_id
             }
         )
 
     def finish_game(self, game_id, s3Bucket, s3Key):
-        pass
-        # TODO: update game status to completed, add s3Bucket and s3Key and set host field to null
+        key = {'gameId': game_id}
+
+        updates = {'status': {'Value': 'Completed', 'Action': 'PUT'},
+                   's3Bucket': {'Value': s3Bucket, 'Action': 'PUT'},
+                   's3Key': {'Value': s3Key, 'Action': 'PUT'},
+                   'hostName': {'Action': 'REMOVE'}}
+
+        self.table.update_item(Key=key, AttributeUpdates=updates)
 
     def scan_table(self):
-        # TODO update to only scan for Active games
+        # TODO update to only scan for Active games - need to add GSI on status field
         scan_result = self.table.scan()
         entries = scan_result['Items']
 

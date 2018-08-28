@@ -80,8 +80,8 @@ class GameHostCache:
             new_host = self.find_host_with_min_games()
             self.__update_game_host__(game, new_host)
 
-    def delete_game(self, game_id):
-        self.dao.finish_game(game_id)
+    def delete_game(self, game_id, bucket, key):
+        self.dao.finish_game(game_id, bucket, key)
 
         # Maintain idempotency of deletes
         if game_id in self.game_host_cache:

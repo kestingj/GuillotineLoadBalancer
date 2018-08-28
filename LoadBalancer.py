@@ -20,6 +20,6 @@ def get_games_for_player(player_id):
 @app.route('games/<string:game_id>', methods=['DELETE'])
 def delete_game(game_id):
     message = request.get_json()
-    cache.delete_game(game_id, message['s3Bucket', 's3Key'])
+    cache.delete_game(game_id, message['s3Bucket'], message['s3Key'])
 
 
