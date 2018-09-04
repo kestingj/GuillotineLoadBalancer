@@ -30,7 +30,8 @@ class GameHostCache:
         game_host_list = []
         for game_id in self.player_to_games[player_id]:
             host_name = self.game_host_cache[game_id][0]
-            game_host_list.append({'gameId': game_id, 'hostName': host_name})
+            player_ids = self.game_host_cache[game_id][1]
+            game_host_list.append({'gameId': game_id, 'hostName': host_name, 'playerIds': player_ids})
 
         return game_host_list
 

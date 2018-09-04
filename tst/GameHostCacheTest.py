@@ -112,18 +112,22 @@ class GameHostCacheTest(unittest.TestCase):
 
         host_name = self.host_names[0]
         game_id = self.cache.new_game(host_name, self.player_ids)
+        bucket = 'bucket'
+        key = 'key'
 
-        self.cache.delete_game(game_id)
+        self.cache.delete_game(game_id, bucket, key)
 
         self.assertEqual(self.cache.game_host_cache.get(game_id), None)
         self.assertEqual(self.cache.host_distribution[host_name], set())
         for player_id in self.player_ids:
             self.assertEqual(self.cache.player_to_games.get(player_id), None)
 
+        mock_dao.finish_game.assert_called_with(game_id, bucket, key)
+
     @patch('GameHostDao.GameHostDao')
     def testDeleteGameIsIdempotent(self, mock_dao):
         self.cache.dao = mock_dao
-        self.cache.delete_game('bogus_game')
+        self.cache.delete_game('bogus_game', 'bucket', 'key')
         mock_dao.finish_game.assert_called()
 
     @patch('Hosts.get_hosts')
@@ -182,7 +186,7 @@ class GameHostCacheTest(unittest.TestCase):
         games = []
         for i in range(count):
             game_id = self.cache.new_game(host_name, self.player_ids)
-            games.append({'gameId': game_id, 'hostName': host_name})
+            games.append({'gameId': game_id, 'hostName': host_name, 'playerIds': self.player_ids})
         return games
 
     def rand_string(self):
